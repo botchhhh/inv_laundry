@@ -6,6 +6,12 @@ function Navbar() {
       <Link to="/">Home</Link>
       <Link to="/about">About</Link>
       <Link to="/dashboard">Dashboard</Link>
+
+      {/* Laundry System Pages */}
+      <Link to="/orders">Orders</Link>
+      <Link to="/inventory">Inventory</Link>
+      <Link to="/reports">Reports</Link>
+      <Link to="/admin-dashboard">Admin Dashboard</Link>
     </nav>
   )
 }
