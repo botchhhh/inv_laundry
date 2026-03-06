@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useEffect, useState } from "react";
+import AdminLayout from "../components/adminlayout";
 import {
   LineChart,
   Line,
@@ -12,184 +13,164 @@ import {
   Tooltip,
   CartesianGrid,
   Legend,
-} from "recharts"
+  ResponsiveContainer,
+} from "recharts";
 
 function LaundryAdminDashboard() {
-  const [view, setView] = useState("admin")
+  const [orders, setOrders] = useState([]);
+  const [inventory, setInventory] = useState([]);
 
-  // Monthly Revenue (Laundry)
-  const monthlyRevenue = [
-    { month: "Jan", revenue: 45000 },
-    { month: "Feb", revenue: 52000 },
-    { month: "Mar", revenue: 61000 },
-    { month: "Apr", revenue: 48000 },
-    { month: "May", revenue: 70000 },
-    { month: "Jun", revenue: 85000 },
-  ]
+  useEffect(() => {
+    const storedOrders = JSON.parse(localStorage.getItem("orders")) || [];
+    const storedInventory = JSON.parse(localStorage.getItem("inventory")) || [];
 
-  // Service Breakdown
-  const serviceData = [
-    { name: "Wash & Fold", value: 120 },
-    { name: "Dry Cleaning", value: 80 },
-    { name: "Wash & Iron", value: 95 },
-  ]
+    setOrders(storedOrders);
+    setInventory(storedInventory);
+  }, []);
 
-  // Order Status
-  const statusData = [
-    { name: "Pending", value: 15 },
-    { name: "Washing", value: 10 },
-    { name: "Drying", value: 8 },
-    { name: "Ready", value: 12 },
-    { name: "Completed", value: 50 },
-  ]
+  /* =========================
+     CALCULATIONS
+  ============================*/
 
-  // Agent Commissions (Laundry Context)
-  const commissions = [
-    {
-      name: "Maria Garcia",
-      role: "Laundry Staff",
-      orders: 45,
-      revenue: 35000,
-      commissionRate: 0.1,
-      totalCommission: 3500,
-      status: "Paid",
-    },
-    {
-      name: "Juan Dela Cruz",
-      role: "Laundry Staff",
-      orders: 38,
-      revenue: 28000,
-      commissionRate: 0.1,
-      totalCommission: 2800,
-      status: "Pending",
-    },
-    {
-      name: "Anna Santos",
-      role: "Senior Staff",
-      orders: 60,
-      revenue: 50000,
-      commissionRate: 0.15,
-      totalCommission: 7500,
-      status: "Paid",
-    },
-  ]
+  const totalOrders = orders.length;
 
-  const totalCommission = commissions.reduce(
-    (sum, c) => sum + c.totalCommission,
+  const totalRevenue = orders.reduce(
+    (sum, order) => sum + Number(order.amount || 0),
     0
-  )
+  );
+
+  // Low Stock = qty below 10
+  const lowStock = inventory.filter((item) => item.qty < 10).length;
+
+  // Count per Product Type
+  const fabconCount = inventory
+    .filter((item) => item.productType === "Fabcon")
+    .reduce((sum, item) => sum + item.qty, 0);
+
+  const detergentCount = inventory
+    .filter((item) => item.productType === "Detergent")
+    .reduce((sum, item) => sum + item.qty, 0);
+
+  const bleachCount = inventory
+    .filter((item) => item.productType === "Bleach")
+    .reduce((sum, item) => sum + item.qty, 0);
+
+  /* =========================
+     CHART DATA
+  ============================*/
+
+  const monthlyRevenueMap = {};
+
+  orders.forEach((order) => {
+    const month = new Date(order.date).toLocaleString("default", {
+      month: "short",
+    });
+
+    if (!monthlyRevenueMap[month]) {
+      monthlyRevenueMap[month] = 0;
+    }
+
+    monthlyRevenueMap[month] += Number(order.amount || 0);
+  });
+
+  const monthlyRevenue = Object.keys(monthlyRevenueMap).map((month) => ({
+    month,
+    revenue: monthlyRevenueMap[month],
+  }));
+
+  const statusMap = {};
+
+  orders.forEach((order) => {
+    if (!statusMap[order.status]) {
+      statusMap[order.status] = 0;
+    }
+    statusMap[order.status] += 1;
+  });
+
+  const statusData = Object.keys(statusMap).map((status) => ({
+    name: status,
+    value: statusMap[status],
+  }));
 
   return (
-    <div>
-      {/* SIDEBAR */}
-      <div>
-        <h2>Laundry Management System</h2>
-        <ul>
-          <li>Dashboard</li>
-          <li>Orders</li>
-          <li>Appointments</li>
-          <li>Inventory</li>
-          <li>Commissions</li>
-          <li>Reports</li>
-        </ul>
+    <AdminLayout>
+      <h2 style={{ marginBottom: "25px" }}>
+        Laundry Dashboard
+      </h2>
+
+      {/* SUMMARY */}
+      <div className="summary-grid">
+        <div className="summary-box">
+          <h3>Total Orders</h3>
+          <p>{totalOrders}</p>
+        </div>
+
+        <div className="summary-box">
+          <h3>Total Revenue</h3>
+          <p>₱{totalRevenue.toLocaleString()}</p>
+        </div>
+
+        <div className="summary-box">
+          <h3>Low Stock Items</h3>
+          <p>{lowStock}</p>
+        </div>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div>
-        {/* TOP BAR */}
-        <div>
-          <input placeholder="Search..." />
-          <button onClick={() => setView("client")}>Client View</button>
-          <button onClick={() => setView("admin")}>Admin View</button>
+      {/* PRODUCT STOCK DISPLAY */}
+      <div className="summary-grid" style={{ marginTop: "20px" }}>
+        <div className="summary-box">
+          <h3>Total Fabcon Stock</h3>
+          <p>{fabconCount}</p>
         </div>
 
-        <h2>Laundry Dashboard - January 2026</h2>
-
-        {/* SUMMARY */}
-        <div>
-          <p>Total Orders: 150</p>
-          <p>Total Revenue: ₱185,000</p>
-          <p>Total Commission: ₱{totalCommission.toLocaleString()}</p>
-          <p>Low Stock Items: 3</p>
+        <div className="summary-box">
+          <h3>Total Detergent Stock</h3>
+          <p>{detergentCount}</p>
         </div>
 
-        {/* REVENUE LINE CHART */}
+        <div className="summary-box">
+          <h3>Total Bleach Stock</h3>
+          <p>{bleachCount}</p>
+        </div>
+      </div>
+
+      {/* MONTHLY REVENUE */}
+      <div className="card">
         <h3>Monthly Revenue</h3>
-        <LineChart width={600} height={300} data={monthlyRevenue}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Line type="monotone" dataKey="revenue" />
-        </LineChart>
-
-        {/* SERVICE BAR CHART */}
-        <h3>Service Breakdown</h3>
-        <BarChart width={600} height={300} data={serviceData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Bar dataKey="value" />
-        </BarChart>
-
-        {/* STATUS PIE CHART */}
-        <h3>Order Status Distribution</h3>
-        <PieChart width={400} height={300}>
-          <Pie
-            data={statusData}
-            dataKey="value"
-            nameKey="name"
-            outerRadius={100}
-            label
-          >
-            {statusData.map((entry, index) => (
-              <Cell key={index} />
-            ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
-
-        {/* COMMISSIONS TABLE */}
-        <h3>Staff Commissions</h3>
-        <table border="1" cellPadding="10">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Orders Handled</th>
-              <th>Revenue Generated</th>
-              <th>Commission Rate</th>
-              <th>Total Commission</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {commissions.map((staff, index) => (
-              <tr key={index}>
-                <td>{staff.name}</td>
-                <td>{staff.role}</td>
-                <td>{staff.orders}</td>
-                <td>₱{staff.revenue.toLocaleString()}</td>
-                <td>{staff.commissionRate * 100}%</td>
-                <td>₱{staff.totalCommission.toLocaleString()}</td>
-                <td>{staff.status}</td>
-              </tr>
-            ))}
-
-            <tr>
-              <td colSpan="5"><strong>Total</strong></td>
-              <td>₱{totalCommission.toLocaleString()}</td>
-              <td></td>
-            </tr>
-          </tbody>
-        </table>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={monthlyRevenue}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="revenue" />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
-    </div>
-  )
+
+      {/* ORDER STATUS */}
+      <div className="card">
+        <h3>Order Status</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={statusData}
+              dataKey="value"
+              nameKey="name"
+              outerRadius={100}
+              label
+            >
+              {statusData.map((_, index) => (
+                <Cell key={index} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </AdminLayout>
+  );
 }
 
-export default LaundryAdminDashboard
+export default LaundryAdminDashboard;

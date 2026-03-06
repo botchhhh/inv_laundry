@@ -1,54 +1,102 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from "react";
 
 function InventoryForms({ addItem, updateItem, editItem }) {
-  const [name, setName] = useState('')
-  const [qty, setQty] = useState('')
+  const [form, setForm] = useState({
+    productType: "Fabcon",
+    category: "Normal",
+    brand: "",
+    qty: ""
+  });
 
   useEffect(() => {
     if (editItem) {
-      setName(editItem.name)
-      setQty(editItem.qty)
+      setForm(editItem);
     }
-  }, [editItem])
+  }, [editItem]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
+  };
 
-    if (!name || !qty) return
+  const handleSubmit = () => {
+    if (!form.brand || !form.qty) {
+      alert("Please complete all fields");
+      return;
+    }
+
+    const itemData = {
+      ...form,
+      id: editItem ? editItem.id : Date.now(),
+      qty: Number(form.qty)
+    };
 
     if (editItem) {
-      updateItem({ ...editItem, name, qty })
+      updateItem(itemData);
     } else {
-      addItem({
-        id: Date.now(),
-        name,
-        qty,
-      })
+      addItem(itemData);
     }
 
-    setName('')
-    setQty('')
-  }
+    setForm({
+      productType: "Fabcon",
+      category: "Normal",
+      brand: "",
+      qty: ""
+    });
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <div>
+      <h3>{editItem ? "Edit Item" : "Add Inventory"}</h3>
+
+      {/* PRODUCT TYPE */}
+      <select
+        name="productType"
+        value={form.productType}
+        onChange={handleChange}
+      >
+        <option value="Fabcon">Fabcon</option>
+        <option value="Detergent">Detergent</option>
+        <option value="Bleach">Bleach</option>
+      </select>
+
+      {/* CATEGORY (NOT FOR BLEACH) */}
+      {form.productType !== "Bleach" && (
+        <select
+          name="category"
+          value={form.category}
+          onChange={handleChange}
+        >
+          <option value="Normal">Normal</option>
+          <option value="Premium">Premium</option>
+        </select>
+      )}
+
+      {/* BRAND */}
       <input
-        className="text-black px-2"
-        placeholder="Item name"
-        value={name}
-        onChange={e => setName(e.target.value)}
+        type="text"
+        name="brand"
+        placeholder="Brand Name (e.g. Downy, Ariel)"
+        value={form.brand}
+        onChange={handleChange}
       />
+
+      {/* STOCK */}
       <input
-        className="text-black px-2"
-        placeholder="Qty"
-        value={qty}
-        onChange={e => setQty(e.target.value)}
+        type="number"
+        name="qty"
+        placeholder="Stock Quantity"
+        value={form.qty}
+        onChange={handleChange}
       />
-      <button className="bg-blue-600 px-4">
-        {editItem ? 'Update' : 'Add'}
-      </button>
-    </form>
-  )
+
+     <button onClick={handleSubmit} className="add-btn">
+  {editItem ? "Update Item" : "Add Item"}
+</button>
+    </div>
+  );
 }
 
-export { InventoryForms }
+export { InventoryForms };
